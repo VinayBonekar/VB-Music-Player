@@ -88,7 +88,7 @@
     function playTrack(i) {
       currentIndex = i;
       const audio = document.getElementById('player');
-      audio.src = playlist[i].webContentLink;
+      audio.src = `https://www.googleapis.com/drive/v3/files/${playlist[i].id}?alt=media&access_token=${gapi.client.getToken().access_token}`;
       audio.play();
     }
     
