@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Bhajan Player</title>
+  <title>VB Player</title>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
     :root { --bg: #0f172a; --card: #1e293b; --accent: #f59e0b; --text: #f8fafc; --selected: #4f46e5; }
@@ -24,7 +24,7 @@
 </head>
 <body>
   <header>
-    <h1> My Music 🎵 </h1>
+    <h1> My Music... 🎵</h1>
     <button class="btn-icon" onclick="handleAuthClick()">👤</button>
   </header>
   <h3>📁 Folders</h3>
@@ -69,6 +69,8 @@
     }
     function resetEverything() {
         document.getElementById('player').pause();
+        document.getElementById('player').src = '';
+        document.getElementById('player').removeAttribute('data-id');
         document.getElementById('tracklist').innerHTML = '';
         document.getElementById('selectAll').checked = false;
         playlist = []; selectedPlaylist = []; currentIdxInSelected = 0;
@@ -82,13 +84,15 @@
       const list = document.getElementById('tracklist'); list.innerHTML = '';
       playlist.forEach((t, i) => {
         const d = document.createElement('div'); d.className = 'item'; d.id = 'track-' + i;
-        d.innerHTML = `<span class="playing-icon" id="icon-${i}"></span><input type="checkbox" id="check-${i}" onchange="updateSelection()"> ${t.name.replace('.mp3','')}`;
+        d.innerHTML = `<span class="playing-icon" id="icon-${i}"></span><input type="checkbox" id="check-${i}"> ${t.name.replace('.mp3','')}`;
         d.onclick = (e) => { 
-            if(e.target.tagName !== 'INPUT') {
-                const chk = document.getElementById('check-'+i);
-                chk.checked = !chk.checked;
-                d.classList.toggle('selected', chk.checked);
-                updateSelection();
+            const chk = document.getElementById('check-'+i);
+            if(e.target.tagName !== 'INPUT') chk.checked = !chk.checked;
+            d.classList.toggle('selected', chk.checked);
+            updateSelection();
+            if(chk.checked) {
+                let idx = selectedPlaylist.indexOf(playlist[i]);
+                if(idx !== -1) playTrack(idx);
             }
         };
         list.appendChild(d);
@@ -101,9 +105,16 @@
             document.getElementById('track-'+i).classList.toggle('selected', all);
         });
         updateSelection();
+        if(all && selectedPlaylist.length > 0) playTrack(0);
     }
     function updateSelection() {
         selectedPlaylist = playlist.filter((_, i) => document.getElementById('check-'+i).checked);
+        const audio = document.getElementById('player');
+        const currentId = audio.getAttribute('data-id');
+        if(currentId && !selectedPlaylist.some(f => f.id === currentId)) {
+            audio.pause(); audio.src = ''; audio.removeAttribute('data-id');
+            document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
+        }
     }
     async function playTrack(idxInSelected) {
       if(selectedPlaylist.length === 0) return;
@@ -112,9 +123,10 @@
       const audio = document.getElementById('player');
       const token = gapi.client.getToken().access_token;
       
+      audio.setAttribute('data-id', file.id);
       document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
       const originalIdx = playlist.findIndex(f => f.id === file.id);
-      if(document.getElementById('icon-' + originalIdx)) document.getElementById('icon-' + originalIdx).innerText = '▶️';
+      if(originalIdx !== -1) document.getElementById('icon-' + originalIdx).innerText = '▶️';
       
       try {
           const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
