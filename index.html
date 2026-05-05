@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>My music Player</title>
+  <title>VB Player</title>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
     :root { --bg: #0f172a; --card: #1e293b; --accent: #f59e0b; --text: #f8fafc; --selected: #4f46e5; }
@@ -24,7 +24,7 @@
 </head>
 <body>
   <header>
-    <h1>My Music </h1>
+    <h1>My Music 🎵 </h1>
     <button class="btn-icon" onclick="handleAuthClick()">👤</button>
   </header>
   <h3>📁 Folders</h3>
@@ -89,7 +89,10 @@
             if(e.target.tagName !== 'INPUT') chk.checked = !chk.checked;
             d.classList.toggle('selected', chk.checked);
             updateSelection();
-            if(chk.checked) playTrackByIndex(i);
+            if(chk.checked) {
+                let idx = selectedPlaylist.indexOf(playlist[i]);
+                playTrack(idx);
+            }
         };
         list.appendChild(d);
       });
@@ -101,13 +104,14 @@
             document.getElementById('track-'+i).classList.toggle('selected', all);
         });
         updateSelection();
-        if(!all) stopEverything();
-        else if(selectedPlaylist.length > 0) playTrack(0);
+        if(all && selectedPlaylist.length > 0) playTrack(0);
+        else stopEverything();
     }
     function updateSelection() {
         selectedPlaylist = playlist.filter((_, i) => document.getElementById('check-'+i).checked);
-        const currentFile = playlist[parseInt(document.getElementById('player').getAttribute('data-idx') || -1)];
-        if(currentFile && !selectedPlaylist.includes(currentFile)) stopEverything();
+        const audio = document.getElementById('player');
+        const currentId = audio.getAttribute('data-id');
+        if(currentId && !selectedPlaylist.some(f => f.id === currentId)) stopEverything();
     }
     async function playTrack(idxInSelected) {
       if(selectedPlaylist.length === 0) return;
@@ -116,7 +120,7 @@
       const audio = document.getElementById('player');
       const token = gapi.client.getToken().access_token;
       
-      audio.setAttribute('data-idx', playlist.indexOf(file));
+      audio.setAttribute('data-id', file.id);
       document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
       document.getElementById('icon-' + playlist.indexOf(file)).innerText = '▶️';
       
@@ -127,11 +131,10 @@
           audio.play();
       } catch(e) { console.error(e); }
     }
-    async function playTrackByIndex(originalIdx) {
-        updateSelection();
-        let idx = selectedPlaylist.indexOf(playlist[originalIdx]);
-        if(idx !== -1) playTrack(idx);
-    }
+    document.getElementById('player').addEventListener('ended', () => {
+        if(document.getElementById('repeat').checked && selectedPlaylist.length === 1) playTrack(currentIdxInSelected);
+        else nextTrack();
+    });
     function playPause() { const a = document.getElementById('player'); a.paused ? a.play() : a.pause(); }
     function nextTrack() { 
         if(selectedPlaylist.length === 0) return;
