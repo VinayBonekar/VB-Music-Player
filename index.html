@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Bhajan Player</title>
+  <title>My music Player</title>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
     :root { --bg: #0f172a; --card: #1e293b; --accent: #f59e0b; --text: #f8fafc; --selected: #4f46e5; }
@@ -24,8 +24,7 @@
 </head>
 <body>
   <header>
-    //comment 1
-    <h1>VB Music</h1>
+    <h1>My Music </h1>
     <button class="btn-icon" onclick="handleAuthClick()">👤</button>
   </header>
   <h3>📁 Folders</h3>
@@ -49,6 +48,7 @@
     const CLIENT_ID = '144706464036-b9nrq2drtjn3jfn1p1ecftl7808f13is.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
     let playlist = []; let selectedPlaylist = []; let currentIdxInSelected = 0;
+    
     function gapiLoaded() { gapi.load('client', () => { gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }); }
     async function handleAuthClick() {
       const client = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (r) => { if(r.access_token) findRoot(); } });
@@ -63,8 +63,16 @@
       const tree = document.getElementById('folder-tree'); tree.innerHTML = '';
       r.result.files.forEach(f => {
         const d = document.createElement('div'); d.className = 'item'; d.innerText = '📁 ' + f.name;
-        d.onclick = () => loadTracks(f.id); tree.appendChild(d);
+        d.onclick = () => { stopEverything(); loadTracks(f.id); };
+        tree.appendChild(d);
       });
+    }
+    function stopEverything() {
+        document.getElementById('player').pause();
+        document.getElementById('player').src = '';
+        document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
+        document.getElementById('selectAll').checked = false;
+        selectedPlaylist = [];
     }
     async function loadTracks(folderId) {
       const r = await gapi.client.drive.files.list({q: `'${folderId}' in parents and mimeType = 'audio/mpeg'`, orderBy: 'name'});
@@ -81,6 +89,7 @@
             if(e.target.tagName !== 'INPUT') chk.checked = !chk.checked;
             d.classList.toggle('selected', chk.checked);
             updateSelection();
+            if(chk.checked) playTrackByIndex(i);
         };
         list.appendChild(d);
       });
@@ -92,11 +101,13 @@
             document.getElementById('track-'+i).classList.toggle('selected', all);
         });
         updateSelection();
-        if(!all) { document.getElementById('player').pause(); document.getElementById('player').src = ''; }
+        if(!all) stopEverything();
         else if(selectedPlaylist.length > 0) playTrack(0);
     }
     function updateSelection() {
         selectedPlaylist = playlist.filter((_, i) => document.getElementById('check-'+i).checked);
+        const currentFile = playlist[parseInt(document.getElementById('player').getAttribute('data-idx') || -1)];
+        if(currentFile && !selectedPlaylist.includes(currentFile)) stopEverything();
     }
     async function playTrack(idxInSelected) {
       if(selectedPlaylist.length === 0) return;
@@ -104,15 +115,22 @@
       const file = selectedPlaylist[currentIdxInSelected];
       const audio = document.getElementById('player');
       const token = gapi.client.getToken().access_token;
+      
+      audio.setAttribute('data-idx', playlist.indexOf(file));
       document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
-      const originalIdx = playlist.indexOf(file);
-      document.getElementById('icon-' + originalIdx).innerText = '▶️';
+      document.getElementById('icon-' + playlist.indexOf(file)).innerText = '▶️';
+      
       try {
           const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
           const blob = await resp.blob();
           audio.src = URL.createObjectURL(blob);
           audio.play();
       } catch(e) { console.error(e); }
+    }
+    async function playTrackByIndex(originalIdx) {
+        updateSelection();
+        let idx = selectedPlaylist.indexOf(playlist[originalIdx]);
+        if(idx !== -1) playTrack(idx);
     }
     function playPause() { const a = document.getElementById('player'); a.paused ? a.play() : a.pause(); }
     function nextTrack() { 
