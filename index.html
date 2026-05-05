@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎵 Bhajanmala Player</title>
+  <style>
+    :root {
+      --bg: #1a0a2e;
+      --card: #2a1045;
+      --card2: #3a1a5e;
+      --accent: #f4a742;
+      --accent2: #e07b1a;
+      --gold: #ffd700;
+      --text: #f0e6ff;
+      --muted: #a08bc0;
+      --active-bg: #5a2a8e;
+      --hover: #4a1e72;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(90,42,142,0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(244,167,66,0.15) 0%, transparent 60%);
+    }
+
+    header {
+      text-align: center;
+      padding: 28px 20px 12px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--gold), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    .app {
+      display: flex;
+      gap: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 20px 40px;
+    }
+
+    /* ── Library Panel ── */
+    .library {
+      flex: 1;
+      min-width: 0;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+    }
+
+    .panel-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .panel-header h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-sm {
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { background: var(--accent); }
+
+    .search-box {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 7px 12px;
+      font-size: 0.84rem;
+      outline: none;
+      margin-top: 8px;
+    }
+    .search-box::placeholder { color: var(--muted); }
+    .search-box:focus { border-color: var(--accent); }
+
+    .song-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 6px 0;
+    }
+
+    .song-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 14px;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .song-item:hover { background: var(--hover); }
+    .song-item.in-playlist { border-left-color: var(--accent); }
+
+    .song-num {
+      color: var(--muted);
+      font-size: 0.72rem;
+      min-width: 22px;
+      text-align: right;
+    }
+
+    .song-title {
+      flex: 1;
+      font-size: 0.82rem;
+      line-height: 1.35;
+      color: var(--text);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .add-btn {
+      background: none;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .add-btn:hover { background: var(--accent); color: #fff; }
+    .add-btn.added { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Right Column ── */
+    .right-col {
+      width: 360px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Player Card ── */
+    .player-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .now-playing-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .now-playing-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+      min-height: 2.8em;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .visualizer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 3px;
+      height: 38px;
+      margin: 14px 0 10px;
+    }
+
+    .bar {
+      width: 5px;
+      background: linear-gradient(to top, var(--accent2), var(--gold));
+      border-radius: 3px;
+      transition: height 0.1s;
+      animation: none;
+    }
+
+    @keyframes bounce {
+      0%, 100% { height: var(--min-h); }
+      50% { height: var(--max-h); }
+    }
+
+    .bar.playing {
+      animation: bounce var(--speed) ease-in-out infinite alternate;
+    }
+
+    /* Progress */
+    .progress-wrap {
+      margin: 10px 0 4px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--accent2), var(--gold));
+      border-radius: 3px;
+      width: 0%;
+      pointer-events: none;
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-btn {
+      background: rgba(255,255,255,0.06);
+      border: none;
+      border-radius: 50%;
+      color: var(--text);
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s;
+    }
+    .ctrl-btn:hover { background: var(--hover); color: var(--gold); transform: scale(1.08); }
+    .ctrl-btn.active { color: var(--gold); background: rgba(244,167,66,0.15); }
+
+    .ctrl-btn.play-pause {
+      width: 54px;
+      height: 54px;
+      font-size: 1.4rem;
+      background: linear-gradient(135deg, var(--accent2), var(--gold));
+      color: #1a0a2e;
+    }
+    .ctrl-btn.play-pause:hover { transform: scale(1.1); filter: brightness(1.1); }
+
+    /* Volume row */
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .vol-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+    .vol-btn:hover { color: var(--gold); }
+    .vol-btn.muted { color: #e05555; }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+      height: 4px;
+    }
+
+    /* ── Playlist Panel ── */
+    .playlist-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(80vh - 300px);
+      min-height: 120px;
+    }
+
+    .playlist-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 4px 0;
+    }
+
+    .pl-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      gap: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .pl-item:hover { background: var(--hover); }
+    .pl-item.active { border-left-color: var(--gold); background: var(--active-bg); }
+    .pl-item.active .pl-title { color: var(--gold); }
+
+    .pl-idx {
+      color: var(--muted);
+      font-size: 0.7rem;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    .pl-title {
+      flex: 1;
+      font-size: 0.8rem;
+      line-height: 1.3;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .pl-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+    .pl-remove:hover { color: #e05555; }
+
+    .empty-msg {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    @media (max-width: 720px) {
+      .app { flex-direction: column; }
+      .right-col { width: 100%; }
+      .library { max-height: 50vh; }
+      .playlist-card { max-height: 40vh; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🙏 Bhajanmala</h1>
+  <p>Sri Sathya Sai Bhajans</p>
+</header>
+
+<div class="app">
+
+  <!-- Library -->
+  <div class="library">
+    <div class="panel-header">
+      <h2>🎵 Library</h2>
+      <button class="btn-sm" onclick="addAllToPlaylist()">+ Add All</button>
+      <input class="search-box" type="search" id="searchBox" placeholder="Search bhajans…" oninput="filterSongs(this.value)" />
+    </div>
+    <div class="song-list" id="songList"></div>
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <!-- Player -->
+    <div class="player-card">
+      <div class="now-playing-label">Now Playing</div>
+      <div class="now-playing-title" id="nowPlayingTitle">— No track selected —</div>
+
+      <!-- Visualizer bars -->
+      <div class="visualizer" id="visualizer"></div>
+
+      <!-- Progress -->
+      <div class="progress-wrap">
+        <div class="progress-bar-bg" id="progressBg" onclick="seek(event)">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="time-row">
+          <span id="currentTime">0:00</span>
+          <span id="totalTime">0:00</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="ctrl-btn" id="btnShuffle" title="Shuffle" onclick="toggleShuffle()">🔀</button>
+        <button class="ctrl-btn" id="btnPrev" title="Previous" onclick="playPrev()">⏮</button>
+        <button class="ctrl-btn play-pause" id="btnPlay" title="Play/Pause" onclick="togglePlay()">▶</button>
+        <button class="ctrl-btn" id="btnNext" title="Next" onclick="playNext()">⏭</button>
+        <button class="ctrl-btn" id="btnRepeat" title="Repeat" onclick="toggleRepeat()">🔁</button>
+      </div>
+
+      <!-- Volume -->
+      <div class="volume-row">
+        <button class="vol-btn" id="muteBtn" title="Mute/Unmute" onclick="toggleMute()">🔊</button>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" oninput="setVolume(this.value)" />
+      </div>
+    </div>
+
+    <!-- Playlist -->
+    <div class="playlist-card">
+      <div class="panel-header">
+        <h2>📋 Playlist</h2>
+        <button class="btn-sm" onclick="clearPlaylist()">Clear</button>
+      </div>
+      <div class="playlist-list" id="playlistEl"></div>
+    </div>
+
+  </div>
+</div>
+
+<audio id="audioPlayer"></audio>
+
+<script>
+// ── Song list ──────────────────────────────────────────────────────────────
+const ALL_SONGS = [
+  "03 - Manasa Bhajare Guru Charanam ｜ Sri Sathya Sai Bhajans.mp3",
+  "1002 - Bhajo Sita Ram Bhajo Radhe Shyam ｜ Sri Sathya Sai Bhajans.mp3",
+  "11 - Govinda Madhava Gopala Keshava ｜ Sri Sathya Sai Bhajans.mp3",
+  "1214 - Ranga Ranga Panduranga Ranga Vittala  ｜  Sai Bhajan.mp3",
+  "129 - Jai Jai Bhavani Ma ｜ Radio Sai Bhajans.mp3",
+  "164 - Madurapuri Nilaye Meenakshi ｜ Radio Sai Bhajans.mp3",
+  "197 - Krishna Krishna Mukunda Janardana ｜ Radio Sai Bhajans.mp3",
+  "199 - Mangala Shubhakari Mata Maheshwari ｜ Radio Sai Bhajans.mp3",
+  "203 - Sundara Mukha Sri Gajanana ｜ Radio Sai Bhajans.mp3",
+  "226 - Purandara Ranga Hare Vitthala ｜ Radio Sai Bhajans.mp3",
+  "2467 - Atma Rama Ananda Ramana ｜ Sri Sathya Sai Bhajans.mp3",
+  "252 - Jagadashraya Shri Raghurama ｜ Radio Sai Bhajans.mp3",
+  "259 - Ramachandra Prabhu Raghuvamsha Rama ｜ Radio Sai Bhajans.mp3",
+  "268 - Vanamali Radha Ramana Giridhari Govinda ｜ Radio Sai Bhajans.mp3",
+  "279 - Krishna Rama Govinda Narayana ｜ Rathotsavam Day Special ｜ Radio Sai Bhajans ｜.mp3",
+  "324 - Devi Bhavani Jagat Janani ｜ Radio Sai Bhajans.mp3",
+  "370 - Veera Maruti Gambheera Maruti ｜ Radio Sai Bhajans.mp3",
+  "380 - Kali Kali Mahakali Kapalini ｜ Radio Sai Bhajans.mp3",
+  "43  - Vitthala Hari Vitthala ｜ Sri Sathya Sai Bhajans.mp3",
+  "44 - Matanga Vadana Ananda Sadana ｜ Sri Sathya Sai Bhajans.mp3",
+  "518 - Prathama Vandana Gowri Nandana ｜ Sri Sathya Sai Bhajans.mp3",
+  "616 - Jaya Devi Durga Gowri Shankari Parvati ｜ Sri Sathya Sai Bhajans.mp3",
+  "686 - Jaya Jaya Raghunandana ｜ Sri Sathya Sai Bhajans.mp3",
+  "728 - Kalyana Krishna Kamaneeya Krishna ｜ Sri Sathya Sai Bhajans.mp3",
+  "756 - Daya Karo Shiva Gangadhari ｜ Sri Sathya Sai Bhajans.mp3",
+  "76 - Shiva Shambho Shambho ｜ Sri Sathya Sai Bhajans.mp3",
+  "826 - Shankara Samba Shiva Hara Hara  ｜  Sathya Sai Bhajan.mp3",
+  "AATMA RAMA ANANDA RAMANA - One of the Most Beautiful Version.mp3",
+  "Ghanashyama Gopala Ghanashyama Gopala ｜ Sundaram Sai Bhajan ｜ Volume 9 ｜ Sundaram Bhajan Group.mp3",
+  "Guruvayurpura Sri Hari Krishna Narayana Gopal ｜ Prasanthi Mandir Live Bhajans ｜ Sai Kulwant Hall.mp3",
+  "Hari Mhana Tumhi Govind Mhana ｜ Marathi Bhajan ｜ Dr Ranjani Vasuki.mp3",
+  "Jagadambike Jaya Jagadishwari ｜ Sai Bhajan I Navaratri Special.mp3",
+  "Jai Ganaraya Sri Ganaraya.mp3",
+  "Krishna Krishna Yaduvara Krishna ｜ August 2020 Krishnaashtami ｜ Prashanthi Bhajans Bay Area.mp3",
+  "Manamohana Krishna Kunja Vihari ｜ Sathya Sai Bhajan.mp3",
+  "Naman Karoon Mein Guru Charanam Guru Charanam Sadguru Charanam ｜ Sathya Sai Bhajan.mp3",
+  "Sai Bajan - Hum Ne Apna Sar Jhuka Deya.mp3",
+  "Vaikuntapathe Narayana Varija Nayana Narayana  ｜  Sai Bhajan.mp3"
+];
+
+function cleanTitle(filename) {
+  return filename.replace(/\.mp3$/i, '').replace(/\s*｜\s*/g, ' · ').trim();
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+const audio = document.getElementById('audioPlayer');
+let playlist    = [];     // array of song filenames
+let currentIdx  = -1;
+let isShuffle   = false;
+let isRepeat    = false;  // repeat playlist
+let isMuted     = false;
+let prevVolume  = 1;
+let isPlaying   = false;
+
+// ── Visualizer setup ───────────────────────────────────────────────────────
+const vizEl = document.getElementById('visualizer');
+const BAR_COUNT = 22;
+for (let i = 0; i < BAR_COUNT; i++) {
+  const b = document.createElement('div');
+  b.className = 'bar';
+  const minH = 4 + Math.random() * 6;
+  const maxH = 20 + Math.random() * 20;
+  const speed = (0.4 + Math.random() * 0.6).toFixed(2);
+  b.style.setProperty('--min-h', minH + 'px');
+  b.style.setProperty('--max-h', maxH + 'px');
+  b.style.setProperty('--speed', speed + 's');
+  b.style.height = minH + 'px';
+  b.style.animationDelay = (Math.random() * 0.5).toFixed(2) + 's';
+  vizEl.appendChild(b);
+}
+
+function setVisualizerPlaying(on) {
+  vizEl.querySelectorAll('.bar').forEach(b => {
+    b.classList.toggle('playing', on);
+    if (!on) b.style.height = b.style.getPropertyValue('--min-h') || '4px';
+  });
+}
+
+// ── Library rendering ──────────────────────────────────────────────────────
+let filteredSongs = [...ALL_SONGS];
+
+function renderLibrary() {
+  const el = document.getElementById('songList');
+  el.innerHTML = '';
+  filteredSongs.forEach((song, i) => {
+    const inPl = playlist.includes(song);
+    const div = document.createElement('div');
+    div.className = 'song-item' + (inPl ? ' in-playlist' : '');
+    div.dataset.song = song;
+    div.innerHTML = `
+      <span class="song-num">${ALL_SONGS.indexOf(song) + 1}</span>
+      <span class="song-title">${cleanTitle(song)}</span>
+      <button class="add-btn ${inPl ? 'added' : ''}" title="${inPl ? 'Added' : 'Add to playlist'}"
+        onclick="toggleFromPlaylist('${song.replace(/'/g, "\\'")}', this)">${inPl ? '✓' : '+'}</button>
+    `;
+    div.querySelector('.song-title').ondblclick = () => {
+      if (!inPl) addToPlaylist(song);
+      const newIdx = playlist.indexOf(song);
+      playTrack(newIdx);
+    };
+    el.appendChild(div);
+  });
+}
+
+function filterSongs(q) {
+  const lq = q.toLowerCase();
+  filteredSongs = ALL_SONGS.filter(s => cleanTitle(s).toLowerCase().includes(lq));
+  renderLibrary();
+}
+
+// ── Playlist management ────────────────────────────────────────────────────
+function addToPlaylist(song) {
+  if (!playlist.includes(song)) {
+    playlist.push(song);
+    renderPlaylist();
+    renderLibrary();
+  }
+}
+
+function toggleFromPlaylist(song, btn) {
+  if (playlist.includes(song)) {
+    removeFromPlaylist(song);
+  } else {
+    addToPlaylist(song);
+  }
+}
+
+function removeFromPlaylist(song) {
+  const idx = playlist.indexOf(song);
+  if (idx === -1) return;
+  playlist.splice(idx, 1);
+  if (currentIdx >= playlist.length) currentIdx = playlist.length - 1;
+  renderPlaylist();
+  renderLibrary();
+}
+
+function addAllToPlaylist() {
+  ALL_SONGS.forEach(s => { if (!playlist.includes(s)) playlist.push(s); });
+  renderPlaylist();
+  renderLibrary();
+}
+
+function clearPlaylist() {
+  audio.pause();
+  audio.src = '';
+  playlist = [];
+  currentIdx = -1;
+  isPlaying = false;
+  updatePlayPauseBtn();
+  setVisualizerPlaying(false);
+  document.getElementById('nowPlayingTitle').textContent = '— No track selected —';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('currentTime').textContent = '0:00';
+  document.getElementById('totalTime').textContent = '0:00';
+  renderPlaylist();
+  renderLibrary();
+}
+
+function renderPlaylist() {
+  const el = document.getElementById('playlistEl');
+  if (playlist.length === 0) {
+    el.innerHTML = '<p class="empty-msg">Add bhajans from the library →</p>';
+    return;
+  }
+  el.innerHTML = '';
+  playlist.forEach((song, i) => {
+    const div = document.createElement('div');
+    div.className = 'pl-item' + (i === currentIdx ? ' active' : '');
+    div.innerHTML = `
+      <span class="pl-idx">${i + 1}</span>
+      <span class="pl-title">${cleanTitle(song)}</span>
+      <button class="pl-remove" title="Remove" onclick="removeFromPlaylist('${song.replace(/'/g, "\\'")}')">✕</button>
+    `;
+    div.onclick = (e) => {
+      if (e.target.classList.contains('pl-remove')) return;
+      playTrack(i);
+    };
+    el.appendChild(div);
+  });
+}
+
+// ── Playback ───────────────────────────────────────────────────────────────
+function playTrack(idx) {
+  if (playlist.length === 0) return;
+  if (idx < 0) idx = playlist.length - 1;
+  if (idx >= playlist.length) idx = 0;
+  currentIdx = idx;
+  const song = playlist[currentIdx];
+  audio.src = encodeURIComponent(song).replace(/%2F/g, '/');
+  audio.load();
+  audio.play().then(() => {
+    isPlaying = true;
+    updatePlayPauseBtn();
+    setVisualizerPlaying(true);
+  }).catch(err => console.warn('Playback error:', err));
+  document.getElementById('nowPlayingTitle').textContent = cleanTitle(song);
+  renderPlaylist();
+  scrollPlaylistToActive();
+}
+
+function scrollPlaylistToActive() {
+  const el = document.getElementById('playlistEl');
+  const active = el.querySelector('.pl-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function togglePlay() {
+  if (playlist.length === 0) return;
+  if (currentIdx === -1) { playTrack(0); return; }
+  if (audio.paused) {
+    audio.play();
+    isPlaying = true;
+    setVisualizerPlaying(true);
+  } else {
+    audio.pause();
+    isPlaying = false;
+    setVisualizerPlaying(false);
+  }
+  updatePlayPauseBtn();
+}
+
+function playNext() {
+  if (playlist.length === 0) return;
+  let next;
+  if (isShuffle) {
+    next = Math.floor(Math.random() * playlist.length);
+  } else {
+    next = currentIdx + 1;
+    if (next >= playlist.length) {
+      if (isRepeat) next = 0;
+      else { audio.pause(); isPlaying = false; updatePlayPauseBtn(); setVisualizerPlaying(false); return; }
+    }
+  }
+  playTrack(next);
+}
+
+function playPrev() {
+  if (playlist.length === 0) return;
+  if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+  let prev = isShuffle ? Math.floor(Math.random() * playlist.length) : currentIdx - 1;
+  if (prev < 0) prev = playlist.length - 1;
+  playTrack(prev);
+}
+
+function updatePlayPauseBtn() {
+  document.getElementById('btnPlay').textContent = isPlaying ? '⏸' : '▶';
+}
+
+audio.addEventListener('ended', playNext);
+
+// ── Progress ───────────────────────────────────────────────────────────────
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  const pct = (audio.currentTime / audio.duration) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+  document.getElementById('totalTime').textContent = formatTime(audio.duration);
+});
+
+function seek(e) {
+  if (!audio.duration) return;
+  const bg = document.getElementById('progressBg');
+  const rect = bg.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  audio.currentTime = pct * audio.duration;
+}
+
+function formatTime(s) {
+  if (isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
+}
+
+// ── Shuffle / Repeat ───────────────────────────────────────────────────────
+function toggleShuffle() {
+  isShuffle = !isShuffle;
+  document.getElementById('btnShuffle').classList.toggle('active', isShuffle);
+}
+
+function toggleRepeat() {
+  isRepeat = !isRepeat;
+  document.getElementById('btnRepeat').classList.toggle('active', isRepeat);
+}
+
+// ── Volume / Mute ──────────────────────────────────────────────────────────
+function setVolume(val) {
+  audio.volume = val;
+  isMuted = (val == 0);
+  updateMuteIcon();
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  if (isMuted) {
+    prevVolume = audio.volume || 1;
+    audio.volume = 0;
+    document.getElementById('volumeSlider').value = 0;
+  } else {
+    audio.volume = prevVolume;
+    document.getElementById('volumeSlider').value = prevVolume;
+  }
+  updateMuteIcon();
+}
+
+function updateMuteIcon() {
+  const btn = document.getElementById('muteBtn');
+  if (isMuted || audio.volume === 0) {
+    btn.textContent = '🔇';
+    btn.classList.add('muted');
+  } else if (audio.volume < 0.5) {
+    btn.textContent = '🔉';
+    btn.classList.remove('muted');
+  } else {
+    btn.textContent = '🔊';
+    btn.classList.remove('muted');
+  }
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  switch (e.code) {
+    case 'Space':      e.preventDefault(); togglePlay(); break;
+    case 'ArrowRight': e.preventDefault(); playNext(); break;
+    case 'ArrowLeft':  e.preventDefault(); playPrev(); break;
+    case 'KeyM':       toggleMute(); break;
+    case 'KeyS':       toggleShuffle(); break;
+    case 'KeyR':       toggleRepeat(); break;
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderLibrary();
+renderPlaylist();
+</script>
+</body>
+</html>
