@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VB Player</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iOS-specific PWA meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VB Player">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Theme colour for browser chrome -->
+  <meta name="theme-color" content="#f59e0b">
+
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
     :root { --bg: #0f172a; --card: #1e293b; --accent: #f59e0b; --text: #f8fafc; --selected: #4f46e5; }
@@ -48,7 +61,7 @@
     const CLIENT_ID = '144706464036-b9nrq2drtjn3jfn1p1ecftl7808f13is.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
     let playlist = []; let selectedPlaylist = []; let currentIdxInSelected = 0;
-    
+
     function gapiLoaded() { gapi.load('client', () => { gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }); }
     async function handleAuthClick() {
       const client = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (r) => { if(r.access_token) findRoot(); } });
@@ -85,7 +98,7 @@
       playlist.forEach((t, i) => {
         const d = document.createElement('div'); d.className = 'item'; d.id = 'track-' + i;
         d.innerHTML = `<span class="playing-icon" id="icon-${i}"></span><input type="checkbox" id="check-${i}"> ${t.name.replace('.mp3','')}`;
-        d.onclick = (e) => { 
+        d.onclick = (e) => {
             const chk = document.getElementById('check-'+i);
             if(e.target.tagName !== 'INPUT') chk.checked = !chk.checked;
             d.classList.toggle('selected', chk.checked);
@@ -122,12 +135,25 @@
       const file = selectedPlaylist[currentIdxInSelected];
       const audio = document.getElementById('player');
       const token = gapi.client.getToken().access_token;
-      
+
       audio.setAttribute('data-id', file.id);
       document.querySelectorAll('.playing-icon').forEach(el => el.innerText = '');
       const originalIdx = playlist.findIndex(f => f.id === file.id);
       if(originalIdx !== -1) document.getElementById('icon-' + originalIdx).innerText = '▶️';
-      
+
+      // Update lock screen / Now Playing metadata via Media Session API
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: file.name.replace('.mp3', ''),
+          artist: 'VB Player',
+          artwork: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }]
+        });
+        navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+        navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+        navigator.mediaSession.setActionHandler('play', () => audio.play());
+        navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+      }
+
       try {
           const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
           const blob = await resp.blob();
@@ -140,7 +166,7 @@
         else if(selectedPlaylist.length > 0) nextTrack();
     });
     function playPause() { const a = document.getElementById('player'); a.paused ? a.play() : a.pause(); }
-    function nextTrack() { 
+    function nextTrack() {
         if(selectedPlaylist.length === 0) return;
         let next = document.getElementById('shuffle').checked ? Math.floor(Math.random() * selectedPlaylist.length) : (currentIdxInSelected + 1) % selectedPlaylist.length;
         playTrack(next);
@@ -149,6 +175,15 @@
         if(selectedPlaylist.length === 0) return;
         let prev = (currentIdxInSelected - 1 + selectedPlaylist.length) % selectedPlaylist.length;
         playTrack(prev);
+    }
+
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
     }
   </script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gapiLoaded()"></script>
