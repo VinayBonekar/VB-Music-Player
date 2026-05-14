@@ -37,7 +37,7 @@
 </head>
 <body>
   <header>
-    <h1> 🎵 My Music.... 🎵</h1>
+    <h1> 🎵 My Music.. 🎵</h1>
     <button class="btn-icon" onclick="handleAuthClick()">👤</button>
   </header>
   <h3>📁 Folders</h3>
@@ -61,12 +61,50 @@
     const CLIENT_ID = '144706464036-b9nrq2drtjn3jfn1p1ecftl7808f13is.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
     let playlist = []; let selectedPlaylist = []; let currentIdxInSelected = 0;
+    // Added following 4 lines - CloudCode
+    let tokenClient = null;
+    let currentToken = null;
+    let tokenRefreshTimer = null;
+    let isAuthenticated = false;
 
     function gapiLoaded() { gapi.load('client', () => { gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }); }
+    // Adding from here - ClaudeCode
+    function scheduleTokenRefresh(expiresIn) {
+      if (tokenRefreshTimer) clearTimeout(tokenRefreshTimer);
+        const delay = Math.max((expiresIn - 300) * 1000, 30000); // 5 min early, min 30s
+        tokenRefreshTimer = setTimeout(() => {
+        tokenClient.requestAccessToken({ prompt: '' }); // silent — no popup
+        }, delay);
+    }
+
+    function onTokenResponse(r) {
+      if (!r.access_token) return;
+      currentToken = r.access_token;
+      gapi.client.setToken({ access_token: currentToken });
+      scheduleTokenRefresh(r.expires_in || 3600);
+      if (!isAuthenticated) {
+        isAuthenticated = true;
+        findRoot();
+      }
+    }
+
+    function handleAuthClick() {
+      if (!tokenClient) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: onTokenResponse
+        });
+      }
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+    // to this point - CloudeCode, and commented below function 
+    /*
     async function handleAuthClick() {
       const client = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (r) => { if(r.access_token) findRoot(); } });
       client.requestAccessToken({prompt: 'consent'});
     }
+    */
     async function findRoot() {
       const r = await gapi.client.drive.files.list({q: "name = 'Music For Music Player' and mimeType = 'application/vnd.google-apps.folder'"});
       if(r.result.files.length) loadFolders(r.result.files[0].id);
@@ -153,20 +191,20 @@
         navigator.mediaSession.setActionHandler('play', () => audio.play());
         navigator.mediaSession.setActionHandler('pause', () => audio.pause());
       }
-
+/*
       try {
           audio.src = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${encodeURIComponent(token)}`;
           audio.load();
           audio.play();
       } catch(e) { console.error(e); }
-      /*
+  */    
       try {
           const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
           const blob = await resp.blob();
           audio.src = URL.createObjectURL(blob);
           audio.play();
       } catch(e) { console.error(e); }
-      */
+      
     }
     document.getElementById('player').addEventListener('ended', () => {
         if(document.getElementById('repeat').checked && selectedPlaylist.length === 1) playTrack(currentIdxInSelected);
