@@ -155,11 +155,18 @@
       }
 
       try {
+          audio.src = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${encodeURIComponent(token)}`;
+          audio.load();
+          audio.play();
+      } catch(e) { console.error(e); }
+      /*
+      try {
           const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
           const blob = await resp.blob();
           audio.src = URL.createObjectURL(blob);
           audio.play();
       } catch(e) { console.error(e); }
+      */
     }
     document.getElementById('player').addEventListener('ended', () => {
         if(document.getElementById('repeat').checked && selectedPlaylist.length === 1) playTrack(currentIdxInSelected);
